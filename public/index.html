@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>선택 비교 시뮬레이터</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 960px;
+      margin: 40px auto;
+      padding: 0 16px;
+      background: #f7f7f8;
+      color: #111;
+    }
+
+    h1 {
+      margin-bottom: 8px;
+    }
+
+    p.description {
+      color: #555;
+      margin-bottom: 24px;
+    }
+
+    .box {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+
+    textarea, input, button {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px;
+      font-size: 16px;
+      margin-top: 8px;
+      margin-bottom: 16px;
+    }
+
+    textarea, input {
+      border: 1px solid #ccc;
+      border-radius: 10px;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      background: black;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+
+    .full {
+      grid-column: 1 / -1;
+    }
+
+    ul {
+      margin-top: 8px;
+    }
+
+    #status {
+      font-weight: bold;
+      margin-bottom: 16px;
+    }
+
+    @media (min-width: 768px) {
+      .grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>선택 비교 시뮬레이터</h1>
+  <p class="description">두 선택지를 넣으면 결과, 장점, 리스크, 최종 판단을 비교해줍니다.</p>
+
+  <div class="box">
+    <label>상황</label>
+    <textarea id="context" rows="4" placeholder="예: 현재 직장은 안정적이지만 만족도가 낮고, 창업 아이디어를 조금씩 준비 중이다."></textarea>
+
+    <label>선택 A</label>
+    <input id="optionA" type="text" placeholder="예: 지금 바로 퇴사하고 창업에 집중한다" />
+
+    <label>선택 B</label>
+    <input id="optionB" type="text" placeholder="예: 1년 더 다니면서 준비한 뒤 창업한다" />
+
+    <button id="btn">비교하기</button>
+    <div id="status"></div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>선택 A 분석</h2>
+      <div id="resultA">아직 결과 없음</div>
+    </div>
+
+    <div class="card">
+      <h2>선택 B 분석</h2>
+      <div id="resultB">아직 결과 없음</div>
+    </div>
+
+    <div class="card full">
+      <h2>최종 판단</h2>
+      <div id="judgment">아직 결과 없음</div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
