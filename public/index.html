@@ -15,8 +15,6 @@
       --accent: #2563eb;
       --success: #15803d;
       --danger: #b91c1c;
-      --soft-blue: #eff6ff;
-      --soft-green: #ecfdf5;
       --shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
       --radius: 18px;
     }
@@ -266,6 +264,10 @@
       color: var(--muted);
     }
 
+    .share-wrap {
+      margin-top: 16px;
+    }
+
     @media (max-width: 760px) {
       .hero h1 {
         font-size: 26px;
@@ -294,9 +296,9 @@
       <h2>입력</h2>
 
       <div class="example-bar">
-        <button class="example-btn" id="exampleJob">퇴사/유지 예시</button>
-        <button class="example-btn" id="exampleBaby">육아 예시</button>
-        <button class="example-btn" id="exampleMove">이사 예시</button>
+        <button type="button" class="example-btn" id="exampleJob">퇴사/유지 예시</button>
+        <button type="button" class="example-btn" id="exampleBaby">육아 예시</button>
+        <button type="button" class="example-btn" id="exampleMove">이사 예시</button>
       </div>
 
       <label for="context">상황</label>
@@ -325,7 +327,7 @@
         </div>
       </div>
 
-      <button class="btn" id="btn">비교하기</button>
+      <button type="button" class="btn" id="btn">비교하기</button>
       <div id="status"></div>
       <div class="footer-note">결과는 참고용 분석이며, 실제 결정은 본인의 상황과 책임 범위를 함께 고려해야 합니다.</div>
     </div>
@@ -343,12 +345,13 @@
     </div>
 
     <div class="card judge">
-  <span class="badge">최종 판단</span>
-  <div id="judgment" class="empty">아직 결과 없음</div>
-  <div style="margin-top: 16px;">
-    <button class="btn" id="shareBtn" style="display:none;">결과 공유하기</button>
-  </div>
-</div>
+      <span class="badge">최종 판단</span>
+      <div id="judgment" class="empty">아직 결과 없음</div>
+
+      <div class="share-wrap">
+        <button type="button" class="btn" id="shareBtn" style="display:none;">결과 공유하기</button>
+      </div>
+    </div>
   </div>
 
   <script src="app.js"></script>
