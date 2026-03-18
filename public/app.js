@@ -23,8 +23,10 @@ document.getElementById("btn").onclick = async () => {
     const data = await res.json();
 
     if (!res.ok) {
-      statusEl.innerText = "오류: " + (data.error || "요청 실패");
-      console.log(data);
+      statusEl.innerText =
+        `오류: ${data.error || "요청 실패"}\n` +
+        `${data.detail || ""}`;
+      console.log("서버 에러 응답:", data);
       return;
     }
 
@@ -52,7 +54,7 @@ document.getElementById("btn").onclick = async () => {
 
     statusEl.innerText = "완료";
   } catch (error) {
-    console.error(error);
     statusEl.innerText = "오류 발생: " + error.message;
+    console.error(error);
   }
 };

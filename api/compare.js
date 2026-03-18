@@ -46,18 +46,11 @@ export default async function handler(req, res) {
   try {
     const response = await client.responses.create({
       model: "gpt-4.1-mini",
-      input: prompt,
-      response_format: {
-        type: "json_object"
-      }
+      input: prompt
     });
 
-    // 🔥 무조건 안전한 텍스트 추출
     const text = response.output_text;
 
-    console.log("GPT RAW:", text);
-
-    // 🔥 JSON 파싱
     let data;
     try {
       data = JSON.parse(text);
@@ -69,13 +62,14 @@ export default async function handler(req, res) {
     }
 
     return res.status(200).json(data);
-
   } catch (error) {
-    console.error("OpenAI 에러:", error);
+    console.error("OpenAI 상세 에러:", error);
 
     return res.status(500).json({
       error: "OpenAI 호출 실패",
-      detail: String(error)
+      detail: error?.message || String(error),
+      status: error?.status || null,
+      name: error?.name || null
     });
   }
 }
