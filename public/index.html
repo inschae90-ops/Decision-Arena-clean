@@ -5,124 +5,298 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>선택 비교 시뮬레이터</title>
   <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --primary: #111827;
+      --accent: #2563eb;
+      --success: #15803d;
+      --danger: #b91c1c;
+      --shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
+      --radius: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
+      margin: 0;
       font-family: Arial, sans-serif;
-      max-width: 960px;
-      margin: 40px auto;
-      padding: 0 16px;
-      background: #f7f7f8;
-      color: #111;
+      background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+      color: var(--text);
     }
 
-    h1 {
-      margin-bottom: 8px;
+    .wrap {
+      width: 100%;
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 32px 16px 48px;
     }
 
-    p.description {
-      color: #555;
-      margin-bottom: 24px;
-    }
-
-    .box {
-      background: white;
-      border-radius: 16px;
-      padding: 20px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    .hero {
       margin-bottom: 20px;
     }
 
-    textarea, input, button {
-      width: 100%;
-      box-sizing: border-box;
-      padding: 12px;
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: 32px;
+      line-height: 1.15;
+    }
+
+    .hero p {
+      margin: 0;
+      color: var(--muted);
       font-size: 16px;
-      margin-top: 8px;
-      margin-bottom: 16px;
+      line-height: 1.6;
     }
 
-    textarea, input {
-      border: 1px solid #ccc;
-      border-radius: 10px;
+    .panel {
+      background: rgba(255, 255, 255, 0.84);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(229, 231, 235, 0.9);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px;
+      margin-bottom: 22px;
     }
 
-    button {
-      border: none;
-      border-radius: 10px;
-      background: black;
-      color: white;
-      cursor: pointer;
-      font-weight: bold;
+    .panel h2 {
+      margin: 0 0 16px;
+      font-size: 18px;
     }
 
-    button:hover {
-      opacity: 0.9;
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 700;
     }
 
-    .grid {
+    .hint {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: -6px;
+      margin-bottom: 14px;
+    }
+
+    textarea,
+    input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px 14px;
+      font-size: 15px;
+      background: #fff;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    textarea:focus,
+    input:focus {
+      border-color: #93c5fd;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    .row {
       display: grid;
-      grid-template-columns: 1fr;
-      gap: 16px;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
     }
 
-    .card {
-      background: white;
-      border-radius: 16px;
-      padding: 20px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    .btn {
+      width: 100%;
+      border: 0;
+      border-radius: 14px;
+      padding: 14px 16px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #111827, #2563eb);
+      cursor: pointer;
+      transition: transform 0.06s ease, opacity 0.15s ease;
     }
 
-    .full {
-      grid-column: 1 / -1;
+    .btn:hover {
+      opacity: 0.95;
     }
 
-    ul {
-      margin-top: 8px;
+    .btn:active {
+      transform: translateY(1px);
     }
 
     #status {
-      font-weight: bold;
-      margin-bottom: 16px;
+      margin-top: 14px;
+      min-height: 22px;
+      font-size: 14px;
+      font-weight: 700;
     }
 
-    @media (min-width: 768px) {
-      .grid {
-        grid-template-columns: 1fr 1fr;
+    .status-loading {
+      color: var(--accent);
+    }
+
+    .status-success {
+      color: var(--success);
+    }
+
+    .status-error {
+      color: var(--danger);
+    }
+
+    .results {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-top: 8px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      min-height: 280px;
+    }
+
+    .card h3 {
+      margin: 0 0 14px;
+      font-size: 20px;
+    }
+
+    .card p {
+      margin: 10px 0;
+      line-height: 1.6;
+    }
+
+    .card ul {
+      margin: 8px 0 14px;
+      padding-left: 20px;
+    }
+
+    .card li {
+      margin: 6px 0;
+      line-height: 1.5;
+    }
+
+    .judge {
+      margin-top: 18px;
+      background: linear-gradient(135deg, #eff6ff, #f8fafc);
+      border: 1px solid #dbeafe;
+    }
+
+    .badge {
+      display: inline-block;
+      margin-bottom: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #1d4ed8;
+      background: #dbeafe;
+    }
+
+    .empty {
+      color: var(--muted);
+    }
+
+    .section-title {
+      margin: 18px 0 10px;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      color: #374151;
+      text-transform: uppercase;
+    }
+
+    .footer-note {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    @media (max-width: 760px) {
+      .hero h1 {
+        font-size: 26px;
+      }
+
+      .row,
+      .results {
+        grid-template-columns: 1fr;
+      }
+
+      .panel,
+      .card {
+        padding: 16px;
       }
     }
   </style>
 </head>
 <body>
-  <h1>선택 비교 시뮬레이터</h1>
-  <p class="description">두 선택지를 넣으면 결과, 장점, 리스크, 최종 판단을 비교해줍니다.</p>
-
-  <div class="box">
-    <label>상황</label>
-    <textarea id="context" rows="4" placeholder="예: 현재 직장은 안정적이지만 만족도가 낮고, 창업 아이디어를 조금씩 준비 중이다."></textarea>
-
-    <label>선택 A</label>
-    <input id="optionA" type="text" placeholder="예: 지금 바로 퇴사하고 창업에 집중한다" />
-
-    <label>선택 B</label>
-    <input id="optionB" type="text" placeholder="예: 1년 더 다니면서 준비한 뒤 창업한다" />
-
-    <button id="btn">비교하기</button>
-    <div id="status"></div>
-  </div>
-
-  <div class="grid">
-    <div class="card">
-      <h2>선택 A 분석</h2>
-      <div id="resultA">아직 결과 없음</div>
+  <div class="wrap">
+    <div class="hero">
+      <h1>선택 비교 시뮬레이터</h1>
+      <p>두 선택지를 넣으면 예상 결과, 장점, 리스크, 최종 판단을 한 화면에서 비교해줍니다.</p>
     </div>
 
-    <div class="card">
-      <h2>선택 B 분석</h2>
-      <div id="resultB">아직 결과 없음</div>
+    <div class="panel">
+      <h2>입력</h2>
+
+      <label for="context">상황</label>
+      <textarea
+        id="context"
+        placeholder="예: 현재 직장은 안정적이지만 만족도가 낮고, 창업 아이디어를 조금씩 준비 중이다."
+      ></textarea>
+      <div class="hint">상황을 구체적으로 쓸수록 결과가 좋아집니다.</div>
+
+      <div class="row">
+        <div>
+          <label for="optionA">선택 A</label>
+          <input
+            id="optionA"
+            type="text"
+            placeholder="예: 지금 바로 퇴사하고 창업에 집중한다"
+          />
+        </div>
+        <div>
+          <label for="optionB">선택 B</label>
+          <input
+            id="optionB"
+            type="text"
+            placeholder="예: 1년 더 다니면서 준비한 뒤 창업한다"
+          />
+        </div>
+      </div>
+
+      <button class="btn" id="btn">비교하기</button>
+      <div id="status"></div>
+      <div class="footer-note">결과는 참고용 분석이며, 실제 결정은 본인의 상황과 책임 범위를 함께 고려해야 합니다.</div>
     </div>
 
-    <div class="card full">
-      <h2>최종 판단</h2>
-      <div id="judgment">아직 결과 없음</div>
+    <div class="results">
+      <div class="card">
+        <h3>선택 A 분석</h3>
+        <div id="resultA" class="empty">아직 결과 없음</div>
+      </div>
+
+      <div class="card">
+        <h3>선택 B 분석</h3>
+        <div id="resultB" class="empty">아직 결과 없음</div>
+      </div>
+    </div>
+
+    <div class="card judge">
+      <span class="badge">최종 판단</span>
+      <div id="judgment" class="empty">아직 결과 없음</div>
     </div>
   </div>
 
