@@ -9,6 +9,9 @@ const judgmentEl = document.getElementById("judgment");
 
 const cardAEl = document.getElementById("cardA");
 const cardBEl = document.getElementById("cardB");
+const shareBtnEl = document.getElementById("shareBtn");
+
+let latestResult = null;
 
 document.getElementById("exampleJob").onclick = () => {
   contextEl.value = "현재 직장은 안정적이지만 만족도가 낮고, 창업 아이디어를 조금씩 준비 중이다.";
@@ -46,6 +49,8 @@ document.getElementById("btn").onclick = async () => {
   judgmentEl.innerHTML = "불러오는 중...";
   cardAEl.classList.remove("highlight-card");
   cardBEl.classList.remove("highlight-card");
+  shareBtnEl.style.display = "none";
+  latestResult = null;
 
   try {
     const res = await fetch("/api/compare", {
@@ -96,11 +101,65 @@ document.getElementById("btn").onclick = async () => {
       <ul>${data.judgment.reasons.map(r => `<li>${r}</li>`).join("")}</ul>
     `;
 
+    latestResult = {
+      context,
+      optionA,
+      optionB,
+      data
+    };
+
+    shareBtnEl.style.display = "block";
     statusEl.className = "status-success";
     statusEl.innerText = "분석 완료";
   } catch (error) {
     console.error(error);
     statusEl.className = "status-error";
     statusEl.innerText = "오류 발생: " + error.message;
+  }
+};
+
+shareBtnEl.onclick = async () => {
+  if (!latestResult) return;
+
+  const { context, optionA, optionB, data } = latestResult;
+
+  const shareText = `
+[선택 비교 결과]
+
+상황
+${context}
+
+선택 A
+${optionA}
+
+- 결과: ${data.optionA.result}
+- 장점:
+${data.optionA.pros.map(p => `  • ${p}`).join("\n")}
+- 리스크:
+${data.optionA.risks.map(r => `  • ${r}`).join("\n")}
+
+선택 B
+${optionB}
+
+- 결과: ${data.optionB.result}
+- 장점:
+${data.optionB.pros.map(p => `  • ${p}`).join("\n")}
+- 리스크:
+${data.optionB.risks.map(r => `  • ${r}`).join("\n")}
+
+최종 판단
+추천 선택: ${data.judgment.betterOption}
+이유:
+${data.judgment.reasons.map(r => `  • ${r}`).join("\n")}
+`.trim();
+
+  try {
+    await navigator.clipboard.writeText(shareText);
+    statusEl.className = "status-success";
+    statusEl.innerText = "결과가 클립보드에 복사되었습니다.";
+  } catch (error) {
+    console.error(error);
+    statusEl.className = "status-error";
+    statusEl.innerText = "복사에 실패했습니다.";
   }
 };
