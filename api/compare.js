@@ -52,7 +52,7 @@ export default async function handler(req, res) {
 
   try {
     const response = await client.responses.create({
-      model: "gpt-5.3",
+      model: "gpt-4.1-mini",
       input: prompt
     });
 
