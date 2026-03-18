@@ -45,8 +45,10 @@ export default async function handler(req, res) {
       input: prompt
     });
 
-    const text = response.output_text;
+    const text = response.output[0].content[0].text;
 
+    console.log("GPT RAW:", text);
+    
     let data;
     try {
       data = JSON.parse(text);
