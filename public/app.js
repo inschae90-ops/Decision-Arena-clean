@@ -1,12 +1,37 @@
-document.getElementById("btn").onclick = async () => {
-  const context = document.getElementById("context").value.trim();
-  const optionA = document.getElementById("optionA").value.trim();
-  const optionB = document.getElementById("optionB").value.trim();
-  const statusEl = document.getElementById("status");
+const contextEl = document.getElementById("context");
+const optionAEl = document.getElementById("optionA");
+const optionBEl = document.getElementById("optionB");
+const statusEl = document.getElementById("status");
 
-  const resultAEl = document.getElementById("resultA");
-  const resultBEl = document.getElementById("resultB");
-  const judgmentEl = document.getElementById("judgment");
+const resultAEl = document.getElementById("resultA");
+const resultBEl = document.getElementById("resultB");
+const judgmentEl = document.getElementById("judgment");
+
+const cardAEl = document.getElementById("cardA");
+const cardBEl = document.getElementById("cardB");
+
+document.getElementById("exampleJob").onclick = () => {
+  contextEl.value = "현재 직장은 안정적이지만 만족도가 낮고, 창업 아이디어를 조금씩 준비 중이다.";
+  optionAEl.value = "지금 바로 퇴사하고 창업에 집중한다";
+  optionBEl.value = "1년 더 다니면서 준비한 뒤 창업한다";
+};
+
+document.getElementById("exampleBaby").onclick = () => {
+  contextEl.value = "맞벌이 중이고 아기는 아직 어리다. 어린이집을 빨리 보낼지, 조금 더 집에서 돌볼지 고민 중이다.";
+  optionAEl.value = "이번 시즌 안에 어린이집을 보낸다";
+  optionBEl.value = "조금 더 집에서 돌본 뒤 보낸다";
+};
+
+document.getElementById("exampleMove").onclick = () => {
+  contextEl.value = "출퇴근이 너무 길고 집은 좁다. 이사를 당장 할지, 1년 더 버틸지 고민 중이다.";
+  optionAEl.value = "올해 안에 바로 이사한다";
+  optionBEl.value = "1년 더 버티고 자금 모은 뒤 이사한다";
+};
+
+document.getElementById("btn").onclick = async () => {
+  const context = contextEl.value.trim();
+  const optionA = optionAEl.value.trim();
+  const optionB = optionBEl.value.trim();
 
   if (!context || !optionA || !optionB) {
     statusEl.className = "status-error";
@@ -19,6 +44,8 @@ document.getElementById("btn").onclick = async () => {
   resultAEl.innerHTML = "불러오는 중...";
   resultBEl.innerHTML = "불러오는 중...";
   judgmentEl.innerHTML = "불러오는 중...";
+  cardAEl.classList.remove("highlight-card");
+  cardBEl.classList.remove("highlight-card");
 
   try {
     const res = await fetch("/api/compare", {
@@ -34,7 +61,7 @@ document.getElementById("btn").onclick = async () => {
     if (!res.ok) {
       statusEl.className = "status-error";
       statusEl.innerText =
-        `${data.error || "요청 실패"} ${data.detail ? `- ${data.detail}` : ""}`;
+        `${data.error || "요청 실패"}${data.detail ? `\n${data.detail}` : ""}`;
       console.log("서버 에러 응답:", data);
       return;
     }
@@ -55,8 +82,16 @@ document.getElementById("btn").onclick = async () => {
       <ul>${data.optionB.risks.map(r => `<li>${r}</li>`).join("")}</ul>
     `;
 
+    const better = (data.judgment.betterOption || "").trim().toUpperCase();
+
+    if (better === "A") {
+      cardAEl.classList.add("highlight-card");
+    } else if (better === "B") {
+      cardBEl.classList.add("highlight-card");
+    }
+
     judgmentEl.innerHTML = `
-      <p><b>추천 선택:</b> ${data.judgment.betterOption}</p>
+      <div class="winner-badge">추천 선택: ${data.judgment.betterOption}</div>
       <div class="section-title">이유</div>
       <ul>${data.judgment.reasons.map(r => `<li>${r}</li>`).join("")}</ul>
     `;
