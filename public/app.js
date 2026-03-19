@@ -35,30 +35,30 @@ async function onCompareSubmit(event) {
   setStatus("비교 중입니다...");
 
   try {
-   const response = await fetch("/api/compare", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    scenario,
-    optionA,
-    optionB,
-  }),
-});
+    const response = await fetch("/api/compare", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        scenario,
+        optionA,
+        optionB,
+      }),
+    });
 
-const rawText = await response.text();
+    const rawText = await response.text();
 
-let data;
-try {
-  data = rawText ? JSON.parse(rawText) : {};
-} catch (e) {
-  throw new Error(`서버가 JSON이 아닌 응답을 반환했습니다: ${rawText.slice(0, 200)}`);
-}
+    let data;
+    try {
+      data = rawText ? JSON.parse(rawText) : {};
+    } catch (e) {
+      throw new Error(`서버가 JSON이 아닌 응답을 반환했습니다: ${rawText.slice(0, 200)}`);
+    }
 
-if (!response.ok) {
-  throw new Error(data?.error || "비교 요청에 실패했습니다.");
-}
+    if (!response.ok) {
+      throw new Error(data?.error || "비교 요청에 실패했습니다.");
+    }
 
     state.latestResult = data;
     state.visibleOutcomes = { A: 1, B: 1 };
@@ -82,12 +82,26 @@ function renderResult() {
   if (!data) return;
 
   const winnerText = getWinnerText(data.overall_winner);
+  const a = data.options?.A || {};
+  const b = data.options?.B || {};
 
   resultSection.innerHTML = `
     <div class="summary-card">
-      <div class="winner-chip">종합 판단 · ${escapeHtml(winnerText)}</div>
+      <div class="summary-top">
+        <div class="winner-chip">
+          <span class="winner-dot"></span>
+          <span>종합 판단 · ${escapeHtml(winnerText)}</span>
+        </div>
+      </div>
+
       <h2>${escapeHtml(data.quick_verdict || "비교 결과")}</h2>
       <p>${escapeHtml(data.comparison_summary || "")}</p>
+
+      <div class="summary-meta">
+        <div class="meta-chip">선택 A 위험도: ${toStars(a.risk_score)} (${Number(a.risk_score || 0)}/5)</div>
+        <div class="meta-chip">선택 B 위험도: ${toStars(b.risk_score)} (${Number(b.risk_score || 0)}/5)</div>
+        <div class="meta-chip">예상 결과는 1개 먼저, 버튼으로 추가 노출</div>
+      </div>
     </div>
 
     <div class="cards">
@@ -110,6 +124,8 @@ function renderOptionCard(key, option) {
     ? safeOption.predicted_outcomes
     : [];
   const visibleCount = Math.max(1, Math.min(state.visibleOutcomes[key] || 1, outcomes.length || 1));
+  const riskScore = Number(safeOption.risk_score || 0);
+  const riskPercent = Math.max(0, Math.min(100, (riskScore / 5) * 100));
 
   return `
     <article class="option-card">
@@ -121,38 +137,63 @@ function renderOptionCard(key, option) {
         <p class="mini-note">${escapeHtml(safeOption.recommendation_note || "")}</p>
       </div>
 
-      <div class="section-title">강점</div>
-      ${renderStringList(safeOption.strengths)}
-
-      <div class="section-title">약점</div>
-      ${renderStringList(safeOption.weaknesses)}
-
-      <div class="section-title">총 위험도</div>
-      <div class="risk-box">
-        <div class="risk-row">
-          <div class="stars" aria-label="총 위험도 ${safeOption.risk_score || 0}점">
-            ${renderStars(safeOption.risk_score || 0)}
+      <div class="card-grid">
+        <div class="subcard">
+          <div class="subcard-title">
+            <span><span class="icon">✅</span> 강점</span>
           </div>
-          <div class="risk-label">${escapeHtml(safeOption.risk_label || "")}</div>
-          <div class="risk-score">${Number(safeOption.risk_score || 0)}/5</div>
+          ${renderStringList(safeOption.strengths)}
         </div>
-        ${renderStringList(safeOption.risk_reasons)}
-      </div>
 
-      <div class="section-title">예상 결과</div>
-      <div id="outcomes-${key}" class="outcome-list">
-        ${renderOutcomeList(outcomes, visibleCount)}
-      </div>
+        <div class="subcard">
+          <div class="subcard-title">
+            <span><span class="icon">⚠️</span> 약점</span>
+          </div>
+          ${renderStringList(safeOption.weaknesses)}
+        </div>
 
-      ${
-        outcomes.length > visibleCount
-          ? `<button
-               type="button"
-               class="secondary-btn more-outcomes-btn"
-               data-key="${key}"
-             >예상 결과 1개 더 보기</button>`
-          : ""
-      }
+        <div class="risk-box">
+          <div class="subcard-title">
+            <span><span class="icon">⭐</span> 총 위험도</span>
+          </div>
+
+          <div class="risk-row">
+            <div class="risk-left">
+              <div class="stars" aria-label="총 위험도 ${riskScore}점">
+                ${renderStars(riskScore)}
+              </div>
+              <div class="risk-badge">${escapeHtml(safeOption.risk_label || "")}</div>
+            </div>
+            <div class="risk-score">${riskScore}/5</div>
+          </div>
+
+          <div class="risk-meter">
+            <div class="risk-fill" style="width: ${riskPercent}%"></div>
+          </div>
+
+          ${renderStringList(safeOption.risk_reasons)}
+        </div>
+
+        <div class="subcard">
+          <div class="subcard-title">
+            <span><span class="icon">🔮</span> 예상 결과</span>
+          </div>
+
+          <div id="outcomes-${key}" class="outcome-list">
+            ${renderOutcomeList(outcomes, visibleCount)}
+          </div>
+
+          ${
+            outcomes.length > visibleCount
+              ? `<button
+                   type="button"
+                   class="secondary-btn more-outcomes-btn"
+                   data-key="${key}"
+                 >예상 결과 1개 더 보기</button>`
+              : ""
+          }
+        </div>
+      </div>
     </article>
   `;
 }
