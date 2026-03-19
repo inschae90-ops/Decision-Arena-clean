@@ -1,165 +1,293 @@
-const contextEl = document.getElementById("context");
-const optionAEl = document.getElementById("optionA");
-const optionBEl = document.getElementById("optionB");
+const compareForm = document.getElementById("compareForm");
+const compareBtn = document.getElementById("compareBtn");
+const shareBtn = document.getElementById("shareBtn");
 const statusEl = document.getElementById("status");
+const resultSection = document.getElementById("resultSection");
 
-const resultAEl = document.getElementById("resultA");
-const resultBEl = document.getElementById("resultB");
-const judgmentEl = document.getElementById("judgment");
+const scenarioInput = document.getElementById("scenario");
+const optionAInput = document.getElementById("optionA");
+const optionBInput = document.getElementById("optionB");
 
-const cardAEl = document.getElementById("cardA");
-const cardBEl = document.getElementById("cardB");
-const shareBtnEl = document.getElementById("shareBtn");
-
-let latestResult = null;
-
-document.getElementById("exampleJob").onclick = () => {
-  contextEl.value = "현재 직장은 안정적이지만 만족도가 낮고, 창업 아이디어를 조금씩 준비 중이다.";
-  optionAEl.value = "지금 바로 퇴사하고 창업에 집중한다";
-  optionBEl.value = "1년 더 다니면서 준비한 뒤 창업한다";
+const state = {
+  latestResult: null,
+  visibleOutcomes: {
+    A: 1,
+    B: 1,
+  },
 };
 
-document.getElementById("exampleBaby").onclick = () => {
-  contextEl.value = "맞벌이 중이고 아기는 아직 어리다. 어린이집을 빨리 보낼지, 조금 더 집에서 돌볼지 고민 중이다.";
-  optionAEl.value = "이번 시즌 안에 어린이집을 보낸다";
-  optionBEl.value = "조금 더 집에서 돌본 뒤 보낸다";
-};
+compareForm.addEventListener("submit", onCompareSubmit);
+shareBtn.addEventListener("click", onShareResult);
 
-document.getElementById("exampleMove").onclick = () => {
-  contextEl.value = "출퇴근이 너무 길고 집은 좁다. 이사를 당장 할지, 1년 더 버틸지 고민 중이다.";
-  optionAEl.value = "올해 안에 바로 이사한다";
-  optionBEl.value = "1년 더 버티고 자금 모은 뒤 이사한다";
-};
+async function onCompareSubmit(event) {
+  event.preventDefault();
 
-document.getElementById("btn").onclick = async () => {
-  const context = contextEl.value.trim();
-  const optionA = optionAEl.value.trim();
-  const optionB = optionBEl.value.trim();
+  const scenario = scenarioInput.value.trim();
+  const optionA = optionAInput.value.trim();
+  const optionB = optionBInput.value.trim();
 
-  if (!context || !optionA || !optionB) {
-    statusEl.className = "status-error";
-    statusEl.innerText = "모든 칸을 입력하세요.";
+  if (!scenario || !optionA || !optionB) {
+    setStatus("모든 입력칸을 채워주세요.");
     return;
   }
 
-  statusEl.className = "status-loading";
-  statusEl.innerText = "분석 중...";
-  resultAEl.innerHTML = "불러오는 중...";
-  resultBEl.innerHTML = "불러오는 중...";
-  judgmentEl.innerHTML = "불러오는 중...";
-  cardAEl.classList.remove("highlight-card");
-  cardBEl.classList.remove("highlight-card");
-  shareBtnEl.style.display = "none";
-  latestResult = null;
+  setLoading(true);
+  setStatus("비교 중입니다...");
 
   try {
-    const res = await fetch("/api/compare", {
+    const response = await fetch("/api/compare", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ context, optionA, optionB })
+      body: JSON.stringify({
+        scenario,
+        optionA,
+        optionB,
+      }),
     });
 
-    const data = await res.json();
+    const data = await response.json();
 
-    if (!res.ok) {
-      statusEl.className = "status-error";
-      statusEl.innerText =
-        `${data.error || "요청 실패"}${data.detail ? `\n${data.detail}` : ""}`;
-      console.log("서버 에러 응답:", data);
+    if (!response.ok) {
+      throw new Error(data?.error || "비교 요청에 실패했습니다.");
+    }
+
+    state.latestResult = data;
+    state.visibleOutcomes = { A: 1, B: 1 };
+
+    renderResult();
+    shareBtn.classList.remove("hidden");
+    setStatus("비교 완료");
+    resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (error) {
+    console.error(error);
+    setStatus(error.message || "오류가 발생했습니다.");
+    resultSection.classList.add("hidden");
+    resultSection.innerHTML = "";
+  } finally {
+    setLoading(false);
+  }
+}
+
+function renderResult() {
+  const data = state.latestResult;
+  if (!data) return;
+
+  const winnerText = getWinnerText(data.overall_winner);
+
+  resultSection.innerHTML = `
+    <div class="summary-card">
+      <div class="winner-chip">종합 판단 · ${escapeHtml(winnerText)}</div>
+      <h2>${escapeHtml(data.quick_verdict || "비교 결과")}</h2>
+      <p>${escapeHtml(data.comparison_summary || "")}</p>
+    </div>
+
+    <div class="cards">
+      ${renderOptionCard("A", data.options?.A)}
+      ${renderOptionCard("B", data.options?.B)}
+    </div>
+
+    <div class="result-footer">
+      공유 버튼을 누르면 현재 비교 결과를 텍스트로 복사하거나 공유합니다.
+    </div>
+  `;
+
+  attachOutcomeHandlers();
+  resultSection.classList.remove("hidden");
+}
+
+function renderOptionCard(key, option) {
+  const safeOption = option || {};
+  const outcomes = Array.isArray(safeOption.predicted_outcomes)
+    ? safeOption.predicted_outcomes
+    : [];
+  const visibleCount = Math.max(1, Math.min(state.visibleOutcomes[key] || 1, outcomes.length || 1));
+
+  return `
+    <article class="option-card">
+      <div class="option-top">
+        <div>
+          <div class="option-badge">선택 ${key}</div>
+          <h3>${escapeHtml(safeOption.name || `선택 ${key}`)}</h3>
+        </div>
+        <p class="mini-note">${escapeHtml(safeOption.recommendation_note || "")}</p>
+      </div>
+
+      <div class="section-title">강점</div>
+      ${renderStringList(safeOption.strengths)}
+
+      <div class="section-title">약점</div>
+      ${renderStringList(safeOption.weaknesses)}
+
+      <div class="section-title">총 위험도</div>
+      <div class="risk-box">
+        <div class="risk-row">
+          <div class="stars" aria-label="총 위험도 ${safeOption.risk_score || 0}점">
+            ${renderStars(safeOption.risk_score || 0)}
+          </div>
+          <div class="risk-label">${escapeHtml(safeOption.risk_label || "")}</div>
+          <div class="risk-score">${Number(safeOption.risk_score || 0)}/5</div>
+        </div>
+        ${renderStringList(safeOption.risk_reasons)}
+      </div>
+
+      <div class="section-title">예상 결과</div>
+      <div id="outcomes-${key}" class="outcome-list">
+        ${renderOutcomeList(outcomes, visibleCount)}
+      </div>
+
+      ${
+        outcomes.length > visibleCount
+          ? `<button
+               type="button"
+               class="secondary-btn more-outcomes-btn"
+               data-key="${key}"
+             >예상 결과 1개 더 보기</button>`
+          : ""
+      }
+    </article>
+  `;
+}
+
+function attachOutcomeHandlers() {
+  const buttons = resultSection.querySelectorAll(".more-outcomes-btn");
+
+  buttons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const key = button.dataset.key;
+      const option = state.latestResult?.options?.[key];
+      const outcomes = Array.isArray(option?.predicted_outcomes)
+        ? option.predicted_outcomes
+        : [];
+
+      if (!outcomes.length) return;
+
+      state.visibleOutcomes[key] = Math.min(
+        (state.visibleOutcomes[key] || 1) + 1,
+        outcomes.length
+      );
+
+      renderResult();
+    });
+  });
+}
+
+function renderStars(score) {
+  const safeScore = Math.max(0, Math.min(5, Number(score) || 0));
+  let html = "";
+
+  for (let i = 1; i <= 5; i += 1) {
+    const filled = i <= safeScore;
+    html += `<span class="star ${filled ? "filled" : "empty"}">★</span>`;
+  }
+
+  return html;
+}
+
+function renderStringList(items) {
+  const safeItems = Array.isArray(items) ? items.filter(Boolean) : [];
+
+  if (!safeItems.length) {
+    return `<ul><li>정보 없음</li></ul>`;
+  }
+
+  return `
+    <ul>
+      ${safeItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+    </ul>
+  `;
+}
+
+function renderOutcomeList(items, visibleCount) {
+  const safeItems = Array.isArray(items) ? items.filter(Boolean) : [];
+
+  if (!safeItems.length) {
+    return `<ol><li>예상 결과 정보 없음</li></ol>`;
+  }
+
+  const visibleItems = safeItems.slice(0, visibleCount);
+
+  return `
+    <ol>
+      ${visibleItems.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+    </ol>
+  `;
+}
+
+function getWinnerText(winner) {
+  if (winner === "A") return "선택 A 우세";
+  if (winner === "B") return "선택 B 우세";
+  return "거의 비등";
+}
+
+function setLoading(isLoading) {
+  compareBtn.disabled = isLoading;
+  compareBtn.textContent = isLoading ? "비교 중..." : "비교하기";
+}
+
+function setStatus(message) {
+  statusEl.textContent = message || "";
+}
+
+async function onShareResult() {
+  if (!state.latestResult) return;
+
+  const shareText = buildShareText(state.latestResult);
+
+  try {
+    if (navigator.share) {
+      await navigator.share({
+        title: "Decision Arena 비교 결과",
+        text: shareText,
+        url: window.location.href,
+      });
+      setStatus("공유 창을 열었습니다.");
       return;
     }
 
-    resultAEl.innerHTML = `
-      <p><b>결과</b><br>${data.optionA.result}</p>
-      <div class="section-title">장점</div>
-      <ul>${data.optionA.pros.map(p => `<li>${p}</li>`).join("")}</ul>
-      <div class="section-title">리스크</div>
-      <ul>${data.optionA.risks.map(r => `<li>${r}</li>`).join("")}</ul>
-    `;
-
-    resultBEl.innerHTML = `
-      <p><b>결과</b><br>${data.optionB.result}</p>
-      <div class="section-title">장점</div>
-      <ul>${data.optionB.pros.map(p => `<li>${p}</li>`).join("")}</ul>
-      <div class="section-title">리스크</div>
-      <ul>${data.optionB.risks.map(r => `<li>${r}</li>`).join("")}</ul>
-    `;
-
-    const better = (data.judgment.betterOption || "").trim().toUpperCase();
-
-    if (better === "A") {
-      cardAEl.classList.add("highlight-card");
-    } else if (better === "B") {
-      cardBEl.classList.add("highlight-card");
-    }
-
-    judgmentEl.innerHTML = `
-      <div class="winner-badge">추천 선택: ${data.judgment.betterOption}</div>
-      <div class="section-title">이유</div>
-      <ul>${data.judgment.reasons.map(r => `<li>${r}</li>`).join("")}</ul>
-    `;
-
-    latestResult = {
-      context,
-      optionA,
-      optionB,
-      data
-    };
-
-    shareBtnEl.style.display = "block";
-    statusEl.className = "status-success";
-    statusEl.innerText = "분석 완료";
+    await navigator.clipboard.writeText(`${shareText}\n\n${window.location.href}`);
+    setStatus("결과를 클립보드에 복사했습니다.");
   } catch (error) {
     console.error(error);
-    statusEl.className = "status-error";
-    statusEl.innerText = "오류 발생: " + error.message;
+    setStatus("공유 또는 복사에 실패했습니다.");
   }
-};
+}
 
-shareBtnEl.onclick = async () => {
-  if (!latestResult) return;
+function buildShareText(data) {
+  const a = data.options?.A || {};
+  const b = data.options?.B || {};
 
-  const { context, optionA, optionB, data } = latestResult;
+  return [
+    "[Decision Arena 비교 결과]",
+    "",
+    `상황: ${data.scenario || ""}`,
+    `종합 판단: ${getWinnerText(data.overall_winner)}`,
+    `한줄 요약: ${data.quick_verdict || ""}`,
+    `설명: ${data.comparison_summary || ""}`,
+    "",
+    `- 선택 A: ${a.name || ""}`,
+    `  총 위험도: ${toStars(a.risk_score)} (${a.risk_score || 0}/5, ${a.risk_label || ""})`,
+    `  예상 결과 1: ${a.predicted_outcomes?.[0] || ""}`,
+    `  예상 결과 2: ${a.predicted_outcomes?.[1] || ""}`,
+    "",
+    `- 선택 B: ${b.name || ""}`,
+    `  총 위험도: ${toStars(b.risk_score)} (${b.risk_score || 0}/5, ${b.risk_label || ""})`,
+    `  예상 결과 1: ${b.predicted_outcomes?.[0] || ""}`,
+    `  예상 결과 2: ${b.predicted_outcomes?.[1] || ""}`,
+  ].join("\n");
+}
 
-  const shareText = `
-[선택 비교 결과]
+function toStars(score) {
+  const safeScore = Math.max(0, Math.min(5, Number(score) || 0));
+  return "★".repeat(safeScore) + "☆".repeat(5 - safeScore);
+}
 
-상황
-${context}
-
-선택 A
-${optionA}
-
-- 결과: ${data.optionA.result}
-- 장점:
-${data.optionA.pros.map(p => `  • ${p}`).join("\n")}
-- 리스크:
-${data.optionA.risks.map(r => `  • ${r}`).join("\n")}
-
-선택 B
-${optionB}
-
-- 결과: ${data.optionB.result}
-- 장점:
-${data.optionB.pros.map(p => `  • ${p}`).join("\n")}
-- 리스크:
-${data.optionB.risks.map(r => `  • ${r}`).join("\n")}
-
-최종 판단
-추천 선택: ${data.judgment.betterOption}
-이유:
-${data.judgment.reasons.map(r => `  • ${r}`).join("\n")}
-`.trim();
-
-  try {
-    await navigator.clipboard.writeText(shareText);
-    statusEl.className = "status-success";
-    statusEl.innerText = "결과가 클립보드에 복사되었습니다.";
-  } catch (error) {
-    console.error(error);
-    statusEl.className = "status-error";
-    statusEl.innerText = "복사에 실패했습니다.";
-  }
-};
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}

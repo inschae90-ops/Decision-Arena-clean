@@ -3,48 +3,52 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>선택 비교 시뮬레이터</title>
+  <title>Decision Arena</title>
   <style>
-    :root {
-      --bg: #f5f7fb;
-      --card: #ffffff;
-      --text: #111827;
-      --muted: #6b7280;
-      --line: #e5e7eb;
-      --primary: #111827;
-      --accent: #2563eb;
-      --success: #15803d;
-      --danger: #b91c1c;
-      --shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
-      --radius: 18px;
-    }
-
     * {
       box-sizing: border-box;
     }
 
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
-      color: var(--text);
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel-2: #1f2937;
+      --line: #334155;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-2: #0ea5e9;
+      --good: #22c55e;
+      --warn: #f59e0b;
+      --bad: #ef4444;
+      --shadow: 0 20px 40px rgba(0, 0, 0, 0.28);
+      --radius: 18px;
     }
 
-    .wrap {
-      width: 100%;
-      max-width: 1040px;
+    body {
+      margin: 0;
+      font-family: Arial, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(56, 189, 248, 0.12), transparent 35%),
+        linear-gradient(180deg, #020617 0%, #0f172a 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .container {
+      width: min(1080px, calc(100% - 32px));
       margin: 0 auto;
-      padding: 32px 16px 48px;
+      padding: 32px 0 56px;
     }
 
     .hero {
-      margin-bottom: 20px;
+      margin-bottom: 22px;
     }
 
     .hero h1 {
-      margin: 0 0 8px;
-      font-size: 32px;
-      line-height: 1.15;
+      margin: 0 0 10px;
+      font-size: clamp(30px, 5vw, 48px);
+      line-height: 1.08;
     }
 
     .hero p {
@@ -55,305 +59,330 @@
     }
 
     .panel {
-      background: rgba(255, 255, 255, 0.84);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(229, 231, 235, 0.9);
+      background: rgba(17, 24, 39, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.18);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+
+    .composer {
       padding: 22px;
-      margin-bottom: 22px;
+      margin-bottom: 20px;
     }
 
-    .panel h2 {
-      margin: 0 0 16px;
-      font-size: 18px;
+    .field {
+      margin-bottom: 16px;
     }
 
-    label {
+    .field label {
       display: block;
       margin-bottom: 8px;
       font-size: 14px;
       font-weight: 700;
-    }
-
-    .hint {
-      font-size: 13px;
-      color: var(--muted);
-      margin-top: -6px;
-      margin-bottom: 14px;
-    }
-
-    textarea,
-    input {
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 14px 14px;
-      font-size: 15px;
-      background: #fff;
-      outline: none;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease;
-    }
-
-    textarea:focus,
-    input:focus {
-      border-color: #93c5fd;
-      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+      color: #dbeafe;
     }
 
     textarea {
-      resize: vertical;
-      min-height: 120px;
-    }
-
-    .row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
-
-    .btn {
       width: 100%;
-      border: 0;
+      min-height: 110px;
+      border: 1px solid var(--line);
       border-radius: 14px;
-      padding: 14px 16px;
+      background: rgba(15, 23, 42, 0.92);
+      color: var(--text);
+      padding: 14px 15px;
+      resize: vertical;
+      font-size: 15px;
+      line-height: 1.55;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.18);
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 16px;
       font-size: 15px;
       font-weight: 700;
-      color: #fff;
-      background: linear-gradient(135deg, #111827, #2563eb);
       cursor: pointer;
-      transition: transform 0.06s ease, opacity 0.15s ease;
+      transition: transform 0.15s ease, opacity 0.2s ease, background 0.2s ease;
     }
 
-    .btn:hover {
-      opacity: 0.95;
+    button:hover {
+      transform: translateY(-1px);
     }
 
-    .btn:active {
-      transform: translateY(1px);
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
     }
 
-    .example-bar {
+    .primary-btn {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #03111b;
+    }
+
+    .secondary-btn {
+      background: rgba(30, 41, 59, 0.95);
+      color: var(--text);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .status {
+      margin-top: 12px;
+      min-height: 22px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .result-wrap {
+      padding: 22px;
+    }
+
+    .summary-card {
+      padding: 18px;
+      background: linear-gradient(180deg, rgba(14, 165, 233, 0.12), rgba(15, 23, 42, 0.65));
+      border: 1px solid rgba(56, 189, 248, 0.18);
+      border-radius: 16px;
+      margin-bottom: 18px;
+    }
+
+    .summary-card .winner-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 7px 12px;
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      color: #dbeafe;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .summary-card h2 {
+      margin: 0 0 8px;
+      font-size: 24px;
+    }
+
+    .summary-card p {
+      margin: 0;
+      color: #d1d5db;
+      line-height: 1.65;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .option-card {
+      padding: 18px;
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid rgba(148, 163, 184, 0.15);
+      border-radius: 16px;
+    }
+
+    .option-top {
       display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
       margin-bottom: 16px;
     }
 
-    .example-btn {
-      border: 1px solid #cbd5e1;
-      background: white;
-      color: #1f2937;
-      border-radius: 999px;
-      padding: 10px 14px;
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
+    .option-top h3 {
+      margin: 6px 0 0;
+      font-size: 22px;
+      line-height: 1.35;
+      word-break: keep-all;
     }
 
-    .example-btn:hover {
-      background: #f8fafc;
-    }
-
-    #status {
-      margin-top: 14px;
-      min-height: 22px;
-      font-size: 14px;
-      font-weight: 700;
-      white-space: pre-line;
-    }
-
-    .status-loading {
-      color: var(--accent);
-    }
-
-    .status-success {
-      color: var(--success);
-    }
-
-    .status-error {
-      color: var(--danger);
-    }
-
-    .results {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 18px;
-      margin-top: 8px;
-    }
-
-    .card {
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 20px;
-      min-height: 280px;
-    }
-
-    .card h3 {
-      margin: 0 0 14px;
-      font-size: 20px;
-    }
-
-    .card p {
-      margin: 10px 0;
-      line-height: 1.6;
-    }
-
-    .card ul {
-      margin: 8px 0 14px;
-      padding-left: 20px;
-    }
-
-    .card li {
-      margin: 6px 0;
-      line-height: 1.5;
-    }
-
-    .judge {
-      margin-top: 18px;
-      background: linear-gradient(135deg, #eff6ff, #f8fafc);
-      border: 1px solid #dbeafe;
-    }
-
-    .badge {
-      display: inline-block;
-      margin-bottom: 12px;
+    .option-badge {
+      display: inline-flex;
       padding: 6px 10px;
       border-radius: 999px;
       font-size: 12px;
-      font-weight: 700;
-      color: #1d4ed8;
-      background: #dbeafe;
-    }
-
-    .winner-badge {
-      display: inline-block;
-      margin-bottom: 12px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      font-size: 13px;
       font-weight: 800;
-      color: #166534;
-      background: #dcfce7;
-      border: 1px solid #bbf7d0;
+      letter-spacing: 0.02em;
+      background: rgba(56, 189, 248, 0.14);
+      color: #bae6fd;
+      border: 1px solid rgba(56, 189, 248, 0.16);
     }
 
-    .highlight-card {
-      border: 2px solid #86efac;
-      background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);
-    }
-
-    .empty {
+    .mini-note {
+      margin: 0;
       color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
     }
 
     .section-title {
       margin: 18px 0 10px;
-      font-size: 13px;
-      font-weight: 800;
-      letter-spacing: 0.02em;
-      color: #374151;
-      text-transform: uppercase;
+      font-size: 14px;
+      color: #cbd5e1;
+      letter-spacing: 0.01em;
     }
 
-    .footer-note {
-      margin-top: 10px;
-      font-size: 12px;
+    ul,
+    ol {
+      margin: 0;
+      padding-left: 20px;
+      line-height: 1.7;
+      color: #e5e7eb;
+    }
+
+    li + li {
+      margin-top: 4px;
+    }
+
+    .risk-box {
+      margin-top: 4px;
+      padding: 14px;
+      border-radius: 14px;
+      background: rgba(30, 41, 59, 0.62);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .risk-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .risk-label {
+      font-size: 14px;
+      color: #dbeafe;
+      font-weight: 700;
+    }
+
+    .stars {
+      font-size: 20px;
+      letter-spacing: 2px;
+      line-height: 1;
+    }
+
+    .star.filled {
+      color: #fbbf24;
+    }
+
+    .star.empty {
+      color: #475569;
+    }
+
+    .risk-score {
+      font-size: 14px;
       color: var(--muted);
     }
 
-    .share-wrap {
-      margin-top: 16px;
+    .outcome-list {
+      margin-bottom: 12px;
     }
 
-    @media (max-width: 760px) {
-      .hero h1 {
-        font-size: 26px;
-      }
+    .result-footer {
+      margin-top: 16px;
+      font-size: 13px;
+      color: var(--muted);
+    }
 
-      .row,
-      .results {
+    @media (max-width: 860px) {
+      .cards {
         grid-template-columns: 1fr;
       }
+    }
 
-      .panel,
-      .card {
+    @media (max-width: 640px) {
+      .container {
+        width: min(100% - 20px, 1080px);
+        padding-top: 22px;
+      }
+
+      .composer,
+      .result-wrap {
         padding: 16px;
+      }
+
+      .summary-card h2 {
+        font-size: 21px;
+      }
+
+      .option-top h3 {
+        font-size: 20px;
       }
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="hero">
-      <h1>선택 비교 시뮬레이터</h1>
-      <p>두 선택지를 넣으면 예상 결과, 장점, 리스크, 최종 판단을 한 화면에서 비교해줍니다.</p>
-    </div>
+  <main class="container">
+    <section class="hero">
+      <h1>Decision Arena</h1>
+      <p>
+        두 선택지를 비교해서 요약, 장단점, 총 위험도(별 1~5), 그리고 예상 결과를 단계적으로 보여줍니다.
+      </p>
+    </section>
 
-    <div class="panel">
-      <h2>입력</h2>
+    <section class="panel composer">
+      <form id="compareForm">
+        <div class="field">
+          <label for="scenario">상황 설명</label>
+          <textarea
+            id="scenario"
+            placeholder="예: 이직을 고민 중인데, 현재 회사에 남을지 스타트업으로 갈지 비교해줘."
+            required
+          ></textarea>
+        </div>
 
-      <div class="example-bar">
-        <button type="button" class="example-btn" id="exampleJob">퇴사/유지 예시</button>
-        <button type="button" class="example-btn" id="exampleBaby">육아 예시</button>
-        <button type="button" class="example-btn" id="exampleMove">이사 예시</button>
-      </div>
-
-      <label for="context">상황</label>
-      <textarea
-        id="context"
-        placeholder="예: 현재 직장은 안정적이지만 만족도가 낮고, 창업 아이디어를 조금씩 준비 중이다."
-      ></textarea>
-      <div class="hint">상황을 구체적으로 쓸수록 결과가 좋아집니다.</div>
-
-      <div class="row">
-        <div>
+        <div class="field">
           <label for="optionA">선택 A</label>
-          <input
+          <textarea
             id="optionA"
-            type="text"
-            placeholder="예: 지금 바로 퇴사하고 창업에 집중한다"
-          />
+            placeholder="예: 현재 회사에 남는다"
+            required
+          ></textarea>
         </div>
-        <div>
+
+        <div class="field">
           <label for="optionB">선택 B</label>
-          <input
+          <textarea
             id="optionB"
-            type="text"
-            placeholder="예: 1년 더 다니면서 준비한 뒤 창업한다"
-          />
+            placeholder="예: 스타트업으로 이직한다"
+            required
+          ></textarea>
         </div>
-      </div>
 
-      <button type="button" class="btn" id="btn">비교하기</button>
-      <div id="status"></div>
-      <div class="footer-note">결과는 참고용 분석이며, 실제 결정은 본인의 상황과 책임 범위를 함께 고려해야 합니다.</div>
-    </div>
+        <div class="actions">
+          <button type="submit" id="compareBtn" class="primary-btn">비교하기</button>
+          <button type="button" id="shareBtn" class="secondary-btn hidden">결과 공유</button>
+        </div>
 
-    <div class="results">
-      <div class="card" id="cardA">
-        <h3>선택 A 분석</h3>
-        <div id="resultA" class="empty">아직 결과 없음</div>
-      </div>
+        <div id="status" class="status"></div>
+      </form>
+    </section>
 
-      <div class="card" id="cardB">
-        <h3>선택 B 분석</h3>
-        <div id="resultB" class="empty">아직 결과 없음</div>
-      </div>
-    </div>
+    <section id="resultSection" class="panel result-wrap hidden"></section>
+  </main>
 
-    <div class="card judge">
-      <span class="badge">최종 판단</span>
-      <div id="judgment" class="empty">아직 결과 없음</div>
-
-      <div class="share-wrap">
-        <button type="button" class="btn" id="shareBtn" style="display:none;">결과 공유하기</button>
-      </div>
-    </div>
-  </div>
-
-  <script src="app.js"></script>
+  <script src="./app.js" defer></script>
 </body>
 </html>
