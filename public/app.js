@@ -35,23 +35,30 @@ async function onCompareSubmit(event) {
   setStatus("비교 중입니다...");
 
   try {
-    const response = await fetch("/api/compare", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        scenario,
-        optionA,
-        optionB,
-      }),
-    });
+   const response = await fetch("/api/compare", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    scenario,
+    optionA,
+    optionB,
+  }),
+});
 
-    const data = await response.json();
+const rawText = await response.text();
 
-    if (!response.ok) {
-      throw new Error(data?.error || "비교 요청에 실패했습니다.");
-    }
+let data;
+try {
+  data = rawText ? JSON.parse(rawText) : {};
+} catch (e) {
+  throw new Error(`서버가 JSON이 아닌 응답을 반환했습니다: ${rawText.slice(0, 200)}`);
+}
+
+if (!response.ok) {
+  throw new Error(data?.error || "비교 요청에 실패했습니다.");
+}
 
     state.latestResult = data;
     state.visibleOutcomes = { A: 1, B: 1 };

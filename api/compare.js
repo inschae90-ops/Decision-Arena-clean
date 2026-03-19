@@ -24,7 +24,58 @@ const SYSTEM_PROMPT = `
    - 2번째는 그 다음에 이어질 수 있는 또 다른 현실적 결과
 10. recommendation_note는 그 선택지를 언제 택하면 좋은지 한 문장으로 작성한다.
 11. 과장하지 말고, 모호한 말 대신 구체적으로 써라.
-`;
+`.trim();
+
+function buildOptionSchema() {
+  return {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      name: { type: "string" },
+      strengths: {
+        type: "array",
+        items: { type: "string" },
+        minItems: 2,
+        maxItems: 4,
+      },
+      weaknesses: {
+        type: "array",
+        items: { type: "string" },
+        minItems: 2,
+        maxItems: 4,
+      },
+      risk_score: {
+        type: "integer",
+        minimum: 1,
+        maximum: 5,
+      },
+      risk_label: { type: "string" },
+      risk_reasons: {
+        type: "array",
+        items: { type: "string" },
+        minItems: 1,
+        maxItems: 3,
+      },
+      predicted_outcomes: {
+        type: "array",
+        items: { type: "string" },
+        minItems: 2,
+        maxItems: 2,
+      },
+      recommendation_note: { type: "string" },
+    },
+    required: [
+      "name",
+      "strengths",
+      "weaknesses",
+      "risk_score",
+      "risk_label",
+      "risk_reasons",
+      "predicted_outcomes",
+      "recommendation_note",
+    ],
+  };
+}
 
 const RESPONSE_SCHEMA = {
   type: "object",
@@ -34,12 +85,8 @@ const RESPONSE_SCHEMA = {
       type: "string",
       enum: ["A", "B", "tie"],
     },
-    quick_verdict: {
-      type: "string",
-    },
-    comparison_summary: {
-      type: "string",
-    },
+    quick_verdict: { type: "string" },
+    comparison_summary: { type: "string" },
     options: {
       type: "object",
       additionalProperties: false,
@@ -53,7 +100,7 @@ const RESPONSE_SCHEMA = {
   required: ["overall_winner", "quick_verdict", "comparison_summary", "options"],
 };
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", ["POST"]);
     return res.status(405).json({ error: "Method Not Allowed" });
@@ -63,19 +110,26 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: "OPENAI_API_KEY가 설정되지 않았습니다." });
   }
 
+  let body;
   try {
-    const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
-    const scenario = String(body.scenario || "").trim();
-    const optionA = String(body.optionA || "").trim();
-    const optionB = String(body.optionB || "").trim();
+    body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
+  } catch (error) {
+    return res.status(400).json({ error: "요청 본문 JSON 파싱에 실패했습니다." });
+  }
 
-    if (!scenario || !optionA || !optionB) {
-      return res.status(400).json({ error: "scenario, optionA, optionB는 필수입니다." });
-    }
+  const scenario = String(body.scenario || "").trim();
+  const optionA = String(body.optionA || "").trim();
+  const optionB = String(body.optionB || "").trim();
 
-    const model = process.env.OPENAI_MODEL || "gpt-5.4-mini";
+  if (!scenario || !optionA || !optionB) {
+    return res.status(400).json({
+      error: "scenario, optionA, optionB는 모두 필수입니다.",
+    });
+  }
 
-    const userPrompt = `
+  const model = process.env.OPENAI_MODEL || "gpt-4.1-mini";
+
+  const userPrompt = `
 상황:
 ${scenario}
 
@@ -86,9 +140,10 @@ ${optionA}
 ${optionB}
 
 위 상황에서 선택 A와 선택 B를 비교하라.
-반드시 스키마에 맞는 JSON만 생성하라.
-`;
+반드시 지정된 JSON 스키마만 출력하라.
+`.trim();
 
+  try {
     const openAiResponse = await fetch(OPENAI_API_URL, {
       method: "POST",
       headers: {
@@ -98,16 +153,25 @@ ${optionB}
       body: JSON.stringify({
         model,
         store: false,
-        temperature: 0.7,
         max_output_tokens: 1200,
         input: [
           {
             role: "system",
-            content: SYSTEM_PROMPT,
+            content: [
+              {
+                type: "input_text",
+                text: SYSTEM_PROMPT,
+              },
+            ],
           },
           {
             role: "user",
-            content: userPrompt,
+            content: [
+              {
+                type: "input_text",
+                text: userPrompt,
+              },
+            ],
           },
         ],
         text: {
@@ -124,6 +188,7 @@ ${optionB}
     const raw = await openAiResponse.json();
 
     if (!openAiResponse.ok) {
+      console.error("OpenAI API error:", raw);
       const apiMessage =
         raw?.error?.message ||
         raw?.error ||
@@ -134,18 +199,19 @@ ${optionB}
     const outputText = extractOutputText(raw);
 
     if (!outputText) {
+      console.error("No output text:", raw);
       return res.status(500).json({
         error: "모델 응답에서 텍스트를 추출하지 못했습니다.",
-        debug: raw,
       });
     }
 
     let parsed;
     try {
       parsed = JSON.parse(outputText);
-    } catch (parseError) {
+    } catch (error) {
+      console.error("JSON parse failed:", outputText);
       return res.status(500).json({
-        error: "모델 JSON 파싱에 실패했습니다.",
+        error: "모델 응답 JSON 파싱에 실패했습니다.",
         rawText: outputText,
       });
     }
@@ -164,67 +230,13 @@ ${optionB}
       error: error?.message || "서버 오류가 발생했습니다.",
     });
   }
-};
-
-function buildOptionSchema() {
-  return {
-    type: "object",
-    additionalProperties: false,
-    properties: {
-      name: {
-        type: "string",
-      },
-      strengths: {
-        type: "array",
-        items: { type: "string" },
-        minItems: 2,
-        maxItems: 4,
-      },
-      weaknesses: {
-        type: "array",
-        items: { type: "string" },
-        minItems: 2,
-        maxItems: 4,
-      },
-      risk_score: {
-        type: "integer",
-        minimum: 1,
-        maximum: 5,
-      },
-      risk_label: {
-        type: "string",
-      },
-      risk_reasons: {
-        type: "array",
-        items: { type: "string" },
-        minItems: 1,
-        maxItems: 3,
-      },
-      predicted_outcomes: {
-        type: "array",
-        items: { type: "string" },
-        minItems: 2,
-        maxItems: 2,
-      },
-      recommendation_note: {
-        type: "string",
-      },
-    },
-    required: [
-      "name",
-      "strengths",
-      "weaknesses",
-      "risk_score",
-      "risk_label",
-      "risk_reasons",
-      "predicted_outcomes",
-      "recommendation_note",
-    ],
-  };
 }
 
 function extractOutputText(responseJson) {
-  if (typeof responseJson?.output_text === "string" && responseJson.output_text.trim()) {
+  if (
+    typeof responseJson?.output_text === "string" &&
+    responseJson.output_text.trim()
+  ) {
     return responseJson.output_text;
   }
 
@@ -256,9 +268,12 @@ function normalizeResult({ scenario, optionA, optionB, parsed }) {
     overall_winner: ["A", "B", "tie"].includes(safe.overall_winner)
       ? safe.overall_winner
       : "tie",
-    quick_verdict: String(safe.quick_verdict || "두 선택지는 장단점이 뚜렷합니다."),
+    quick_verdict: String(
+      safe.quick_verdict || "두 선택지는 장단점이 뚜렷합니다."
+    ),
     comparison_summary: String(
-      safe.comparison_summary || "상황의 우선순위에 따라 더 유리한 선택이 달라집니다."
+      safe.comparison_summary ||
+        "상황의 우선순위에 따라 더 유리한 선택이 달라집니다."
     ),
     options: {
       A: normalizedA,
@@ -300,7 +315,10 @@ function normalizePredictedOutcomes(value) {
     : [];
 
   if (arr.length >= 2) return arr.slice(0, 2);
-  if (arr.length === 1) return [arr[0], "추가 예상 결과 정보가 충분하지 않습니다."];
+  if (arr.length === 1) {
+    return [arr[0], "추가 예상 결과 정보가 충분하지 않습니다."];
+  }
+
   return [
     "초기에는 상황 변화가 체감될 수 있습니다.",
     "이후 결과는 실행 방식에 따라 달라질 수 있습니다.",
